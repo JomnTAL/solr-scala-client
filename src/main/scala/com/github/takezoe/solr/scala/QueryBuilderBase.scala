@@ -179,12 +179,18 @@ trait QueryBuilderBase[Repr <: QueryBuilderBase[Repr]] {
    */
   def highlight(field: String, size: Int = 100,
                 prefix: String = "", postfix: String = "",
-                snippets: Int = 1): Repr = {
+                snippets: Int = 1,
+                method: Option[String] = None,
+                merge: Boolean = false
+               ): Repr = {
     val ret = copy(newHighlightField = field)
     ret.solrQuery.setHighlight(true)
     ret.solrQuery.addHighlightField(field)
     ret.solrQuery.setHighlightSnippets(snippets)
     ret.solrQuery.setHighlightFragsize(size)
+    method.foreach(ret.solrQuery.set("hl.method", _))
+    ret.solrQuery.set("hl.mergeContiguous", merge)
+    ret.solrQuery.set("hl.bs.type", "CHARACTER")
     if(prefix.nonEmpty){
       ret.solrQuery.setHighlightSimplePre(prefix)
     }
@@ -224,7 +230,7 @@ trait QueryBuilderBase[Repr <: QueryBuilderBase[Repr]] {
         if(solrQuery.getHighlight){
           val id = doc.getFieldValue(this.id)
           if(id != null && highlight.get(id) != null && highlight.get(id).get(highlightField) != null){
-            map + ("highlights" -> highlight.get(id).get(highlightField))
+            map + ("highlights" -> highlight.get(id).get(highlightField).asScala.toList)
           } else {
             throw new UnspecifiedIdError
           }
@@ -354,6 +360,18 @@ trait QueryBuilderBase[Repr <: QueryBuilderBase[Repr]] {
   def facetPivotFields(pivotField: String*): Repr = {
     val ret = copy()
     ret.solrQuery.addFacetPivotField(pivotField: _*)
+    ret
+  }
+
+  def default(defaultFiled: String): Repr = {
+    val ret = copy()
+    ret.solrQuery.setParam("df", defaultFiled)
+    ret
+  }
+
+  def facetLimit(limit: Int): Repr = {
+    val ret = copy()
+    ret.solrQuery.setFacetLimit(limit)
     ret
   }
 
