@@ -13,19 +13,19 @@ trait QueryBuilderBase[Repr <: QueryBuilderBase[Repr]] {
 
   protected var collection: String = null
   protected var id: String = "id"
-  protected var highlightField: String = null
+  protected var highlightFields: List[String] = Nil
   protected var recommendFlag: Boolean = false
 
   protected def createCopy: Repr
 
   private def copy(newId: String = id,
                    newCollection: String = collection,
-                   newHighlightField: String = highlightField,
+                   newHighlightFields: List[String] = highlightFields,
                    newRecommendFlag: Boolean = recommendFlag): Repr = {
     val ret = createCopy
     ret.id = newId
     ret.collection = newCollection
-    ret.highlightField = newHighlightField
+    ret.highlightFields = newHighlightFields
     ret.recommendFlag = newRecommendFlag
     ret.solrQuery = solrQuery.getCopy
     ret
@@ -177,17 +177,21 @@ trait QueryBuilderBase[Repr <: QueryBuilderBase[Repr]] {
    * @param prefix the prefix of highlighted ranges
    * @param postfix the postfix of highlighted ranges
    */
-  def highlight(field: String, size: Int = 100,
+  def highlight(fields: List[String], size: Int = 100,
                 prefix: String = "", postfix: String = "",
                 snippets: Int = 1,
                 method: Option[String] = None,
-                merge: Boolean = false
+                merge: Boolean = false,
+                requireFieldMatch: Boolean = false,
                ): Repr = {
-    val ret = copy(newHighlightField = field)
+    val ret = copy(newHighlightFields = fields)
     ret.solrQuery.setHighlight(true)
-    ret.solrQuery.addHighlightField(field)
+    for (field <- fields) {
+      ret.solrQuery.addHighlightField(field)
+    }
     ret.solrQuery.setHighlightSnippets(snippets)
     ret.solrQuery.setHighlightFragsize(size)
+    ret.solrQuery.setHighlightRequireFieldMatch(requireFieldMatch)
     method.foreach(ret.solrQuery.set("hl.method", _))
     ret.solrQuery.set("hl.mergeContiguous", merge)
     ret.solrQuery.set("hl.bs.type", "CHARACTER")
@@ -229,8 +233,14 @@ trait QueryBuilderBase[Repr <: QueryBuilderBase[Repr]] {
         val map = docToMap(doc)
         if(solrQuery.getHighlight){
           val id = doc.getFieldValue(this.id)
-          if(id != null && highlight.get(id) != null && highlight.get(id).get(highlightField) != null){
-            map + ("highlights" -> highlight.get(id).get(highlightField).asScala.toList)
+          if(id != null && highlight.get(id) != null) {
+            var hightlighted: List[String] = Nil
+            for (highlightField <- highlightFields) {
+              if (highlight.get(id).get(highlightField) != null) {
+                hightlighted = hightlighted ::: highlight.get(id).get(highlightField).asScala.toList
+              }
+            }
+          map + ("highlights" -> hightlighted)
           } else {
             throw new UnspecifiedIdError
           }
