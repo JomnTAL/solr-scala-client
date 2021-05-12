@@ -196,14 +196,14 @@ trait QueryBuilderBase[Repr <: QueryBuilderBase[Repr]] {
    * @param prefix the prefix of highlighted ranges
    * @param postfix the postfix of highlighted ranges
    */
-  def highlights(fields: List[String], size: Int = 100,
+  def highlights(fields: Seq[String], size: Int = 100,
                  prefix: String = "", postfix: String = "",
                  snippets: Int = 1,
                  method: Option[String] = None,
                  merge: Boolean = false,
                  requireFieldMatch: Boolean = false,
                ): Repr = {
-    val ret = copy(newHighlightFields = fields)
+    val ret = copy(newHighlightFields = fields.toList)
     ret.solrQuery.setHighlight(true)
     for (field <- fields) {
       ret.solrQuery.addHighlightField(field)
