@@ -183,8 +183,11 @@ trait QueryBuilderBase[Repr <: QueryBuilderBase[Repr]] {
                 method: Option[String] = None,
                 merge: Boolean = false,
                 requireFieldMatch: Boolean = false,
+                other: Option[Map[String, String]] = None
                ): Repr = {
-    highlights(List(field), size, prefix, postfix, snippets, method, merge, requireFieldMatch)
+    highlights(List(field), size, prefix, postfix,
+               snippets, method, merge, requireFieldMatch,
+               other)
   }
 
   /**
@@ -202,6 +205,7 @@ trait QueryBuilderBase[Repr <: QueryBuilderBase[Repr]] {
                  method: Option[String] = None,
                  merge: Boolean = false,
                  requireFieldMatch: Boolean = false,
+                 other: Option[Map[String, String]] = None
                ): Repr = {
     val ret = copy(newHighlightFields = fields.toList)
     ret.solrQuery.setHighlight(true)
@@ -214,11 +218,16 @@ trait QueryBuilderBase[Repr <: QueryBuilderBase[Repr]] {
     method.foreach(ret.solrQuery.set("hl.method", _))
     ret.solrQuery.set("hl.mergeContiguous", merge)
     ret.solrQuery.set("hl.bs.type", "CHARACTER")
-    if(prefix.nonEmpty){
+    if (prefix.nonEmpty){
       ret.solrQuery.setHighlightSimplePre(prefix)
     }
-    if(postfix.nonEmpty){
+    if (postfix.nonEmpty){
       ret.solrQuery.setHighlightSimplePost(postfix)
+    }
+    if (other.isDefined) {
+      other.get.foreach(item => {
+                          ret.solrQuery.set(item._1, item._2)
+                        })
     }
     ret
   }
